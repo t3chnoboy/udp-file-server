@@ -30,6 +30,7 @@ download(Socket, Address, Port, Filename) ->
       io:format("Receiving: ~s - ~B bytes~n", [Filename, File_size]),
       case allocate_file(Filename, File_size, ?PACKET_SIZE) of
         {ok, File, File_map} ->
+          gen_udp:send(Socket, Address, Port, File_map),
           receive_file(File, File_map);
         {error, Reason} ->
           io:format("Error: ~p~n", [Reason])
@@ -38,8 +39,8 @@ download(Socket, Address, Port, Filename) ->
       io:format("Connection error!~n")
   end.
 
-receive_file(Name, Size) ->
-  io:format("Download starts~!!!!~n"),
+receive_file(File, File_map) ->
+  io:format("Download map: ~p~n", [File_map]),
   ok.
 
 allocate_file(_, 0, _) ->
