@@ -1,9 +1,8 @@
--define(SOCK_OPTS, [binary, {active, false},
-                            {sndbuf,4194304},
-                            {recbuf,4194304},
-                            {nodelay, true},
-                            {packet, raw}]).
+-define(SOCK_OPTS, [binary, {active, true}
+                            % {sndbuf, 11000},
+                            % {recbuf, 11000}
+                   ]).
 -define(PORT, 1337).
 -define(HOST, "localhost").
--define(TIMEOUT, 30000).
--define(PACKET_SIZE, 60000).
+-define(TIMEOUT, 1000).
+-define(PACKET_SIZE, 6000).
