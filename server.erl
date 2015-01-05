@@ -3,6 +3,8 @@
 -mode(compile).
 -export([start_server/1, open/1, main/1, calculate_offset/1]).
 
+start_server(Ports) when is_list(Ports) ->
+  [spawn(server, open, [Port]) || Port <- Ports];
 start_server(Port) ->
   spawn(server, open, [Port]).
 

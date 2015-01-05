@@ -1,5 +1,5 @@
 -module(utils).
--export([formatted_time/0, remove_newline/1, index/1, setnth/3, flush/0]).
+-export([formatted_time/0, remove_newline/1, index/1, setnth/3, flush/0, list_to_bits/1]).
 
 formatted_time() ->
   {{Year, Month, Day}, {Hour, Minute, Second}} = erlang:localtime(),
@@ -20,3 +20,6 @@ flush() ->
     _ -> flush()
   after 0 -> ok
 end.
+
+list_to_bits(List) ->
+  << <<X:1>> || X <- List >>.
