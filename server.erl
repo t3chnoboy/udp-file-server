@@ -1,7 +1,7 @@
 -module(server).
 -include("config.hrl").
 -mode(compile).
--export([start_server/1, open/1, main/1, calculate_offset/1]).
+-export([start_server/1, open/1, main/1, calculate_offset/1, decode_map/2]).
 
 start_server(Port) ->
   spawn(server, open, [Port]).
@@ -23,9 +23,9 @@ send_file(Socket, Address, Port, Filename) ->
   File_size = filelib:file_size(["uploads/", binary_to_list(Filename)]),
   io:format("~s: ~B ~n", [Filename, File_size]),
   gen_udp:send(Socket, Address, Port, <<File_size:32/integer>>),
-  case wait_for_file_map() of
+  case wait_for_file_map(File_size) of
     {ok, File_map} ->
-      send_missing_chunks(Socket, Address, Port, binary_to_list(File_map), binary_to_list(Filename));
+      send_missing_chunks(Socket, Address, Port, File_map, binary_to_list(Filename), File_size);
     {error, Reason} ->
       io:format("Error: ~p~n", [Reason])
   end.
@@ -39,7 +39,7 @@ map_to_offsets(Bitmap) ->
   Indexed_map = utils:index(Bitmap),
   lists:filtermap(fun server:calculate_offset/1, Indexed_map).
 
-send_missing_chunks(Socket, Address, Port, File_map, Filename) ->
+send_missing_chunks(Socket, Address, Port, File_map, Filename, File_size) ->
   Offsets = map_to_offsets(File_map),
   File_path = ["uploads/", Filename],
   {ok, File} = file:open(File_path, [read, binary]),
@@ -48,21 +48,26 @@ send_missing_chunks(Socket, Address, Port, File_map, Filename) ->
                     ok = gen_udp:send(Socket, Address, Port, <<Offset:32/integer, Data/binary>>)
                 end, Offsets),
   ok = gen_udp:send(Socket, Address, Port, <<"SENT">>),
-  case wait_for_file_map() of
+  case wait_for_file_map(File_size) of
     {ok, New_file_map} ->
-      send_missing_chunks(Socket, Address, Port, binary_to_list(New_file_map), Filename);
+      io:format("Received map: ~p~n", [File_map]),
+      send_missing_chunks(Socket, Address, Port, New_file_map, Filename, File_size);
     ok -> ok;
     {error, Reason} ->
       io:format("Error: ~p~n", [Reason])
   end.
 
-wait_for_file_map() ->
+decode_map(Map, Size) ->
+  Chunk_number = trunc(Size/?PACKET_SIZE) + 1,
+  lists:sublist(utils:bits_to_list(Map), Chunk_number).
+
+wait_for_file_map(Size) ->
   receive
     {udp, _, _, _, <<"DONE">>} ->
       io:format("Transfer finished!~n"),
       ok;
     {udp, _, _, _, File_map} ->
-      {ok, File_map}
+      {ok, decode_map(File_map, Size)}
   after ?TIMEOUT ->
       {error, disconnect}
   end.

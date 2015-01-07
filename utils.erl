@@ -1,5 +1,12 @@
 -module(utils).
--export([formatted_time/0, remove_newline/1, index/1, setnth/3, flush/0]).
+-export([formatted_time/0,
+         remove_newline/1,
+         index/1, setnth/3,
+         flush/0,
+         bits_to_list/1,
+         list_to_bits/1,
+         list_divisible_by_N/2
+        ]).
 
 formatted_time() ->
   {{Year, Month, Day}, {Hour, Minute, Second}} = erlang:localtime(),
@@ -20,3 +27,13 @@ flush() ->
     _ -> flush()
   after 0 -> ok
 end.
+
+bits_to_list(Bitstring) ->
+  [X || <<X:1>> <= Bitstring].
+
+list_to_bits(List) ->
+  << <<X:1>> || X <- List>>.
+
+list_divisible_by_N(List, N) ->
+  Reminder = 8 - (length(List) rem N),
+  List ++ [0 || _ <- lists:seq(1, Reminder)].
