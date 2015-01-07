@@ -12,8 +12,11 @@ connect() ->
 
 wait_for_command(Socket) ->
   Command = io:get_line(">"),
-  handle_command(Command, Socket),
-  wait_for_command(Socket).
+  case handle_command(Command, Socket) of
+    exit -> ok;
+    _ ->
+      wait_for_command(Socket)
+  end.
 
 request_file(Socket, Address, Port, Filename) ->
   gen_udp:send(Socket, Address, Port, Filename),
@@ -54,8 +57,10 @@ receive_file(File, File_map, S, A, P) ->
         _ ->
           receive_file(File, New_file_map, S, A, P)
       end
-  after ?TIMEOUT ->
-    io:format("Timeout!~n")
+  after 500 ->
+    ok = gen_udp:send(S, A, P, encode_map(File_map)),
+    io:format("Resending map!~n"),
+    receive_file(File, File_map, S, A, P)
   end.
 
 encode_map(Map) ->
@@ -82,6 +87,8 @@ handle_command(Command, Socket) ->
   case Command of
     ("DOWNLOAD " ++ Filename) ->
       download(Socket, ?HOST, ?PORT, utils:remove_newline(Filename));
+    "exit\n" ->
+      exit;
     _ ->
       io:format("unknown command~n")
   end.
